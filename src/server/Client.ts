@@ -1,8 +1,8 @@
-import { Response } from "express"
+import { WebSocket } from 'ws'
 
 export interface Client {
   id: string
   room: string
-  res?: Response
+  ws?: WebSocket
   player: "x" | "o"
 }

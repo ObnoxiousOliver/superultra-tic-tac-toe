@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { Board } from '../models/TicTacToe'
+import { Board } from '../server/models/TicTacToe'
 import OIcon from './OIcon.vue';
 import XIcon from './XIcon.vue';
 

@@ -31,7 +31,7 @@ export class Room {
     const connectedClient = this.clients.find(c => c.id === client.id)
 
     if (connectedClient) {
-      connectedClient.res = client.res
+      connectedClient.ws = client.ws
       connectedClient.id = client.id
 
       console.log('Client connected:', connectedClient.id)
@@ -85,7 +85,7 @@ export class Room {
   disconnectClient(client: Client) {
     this.clients = this.clients.filter(c => c.id !== client.id)
 
-    client.res?.end()
+    client.ws?.close(1000, 'Disconnected')
 
     if (this.clients.length > 0 && this.game) {
       this.sendToClients({ type: 'error', payload: 'Opponent disconnected' })
@@ -140,7 +140,7 @@ export class Room {
     payload?: any
   }) {
     this.clients.forEach(client => {
-      client.res?.write(`data: ${JSON.stringify(data)}\n\n`)
+      client.ws?.send(JSON.stringify(data))
     })
   }
 
@@ -148,7 +148,7 @@ export class Room {
     type: 'joined' | 'state' | 'win' | 'draw' | 'error' ,
     payload?: any
   }) {
-    client.res?.write(`data: ${JSON.stringify(data)}\n\n`)
+    client.ws?.send(JSON.stringify(data))
   }
 
   static codeRoomCodeCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'

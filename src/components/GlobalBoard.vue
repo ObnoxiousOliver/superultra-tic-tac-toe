@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { GlobalBoard } from '../models/TicTacToe';
+import { GlobalBoard } from '../server/models/TicTacToe';
 import TicTacToe from './TicTacToe.vue';
 
 defineProps<{

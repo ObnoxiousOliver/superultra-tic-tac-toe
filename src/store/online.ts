@@ -1,7 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { GlobalBoard } from "../server/models/TicTacToe";
-import { type ParsedEvent, createParser, type ReconnectInterval } from 'eventsource-parser'
 import router from "../router";
 
 export interface GameSession {
@@ -26,6 +25,7 @@ export const useOnline = defineStore('online', () => {
       method: 'POST'
     })
 
+
     if (!res.ok) {
       throw new Error('Failed to create room')
     }
@@ -42,18 +42,73 @@ export const useOnline = defineStore('online', () => {
       throw new Error('Failed to join room')
     }
 
-    subscribeToRoom(res)
+    await subscribeToRoom(res)
   }
 
-  function subscribeToRoom(sse: Response) {
-    if (!sse.body) {
+    async function subscribeToRoom(res: Response) {
+    if (!res.body) {
       throw new Error('Failed to create room')
     }
 
-    const parser = createParser((event: ParsedEvent | ReconnectInterval) => {
-      if (event.type === 'event') {
-        const data = JSON.parse(event.data)
+    // const parser = createParser((event: ParsedEvent | ReconnectInterval) => {
+    //   if (event.type === 'event') {
+    //     const data = JSON.parse(event.data)
 
+    //     console.log('Received event:', data)
+
+    //     switch (data.type) {
+    //       case 'joined':
+    //         gameSession.value = {
+    //           roomCode: data.payload.roomCode,
+    //           clientId: data.payload.clientId,
+    //           player: data.payload.player
+    //         }
+
+    //         router.push(`/room/${data.payload.roomCode}`)
+    //         break
+    //       case 'state':
+    //         if (!gameSession.value) {
+    //           throw new Error('Game session not found')
+    //         }
+
+    //         gameSession.value.game = {
+    //           board: data.payload.board,
+    //           currentPlayer: data.payload.currentPlayer,
+    //           activeBoards: data.payload.activeBoards
+    //         }
+    //         break
+    //       case 'win':
+    //         if (!gameSession.value?.game) {
+    //           throw new Error('Game session not found')
+    //         }
+
+    //         if (data.payload === 'x' || data.payload === 'o') {
+    //           gameSession.value.game.winner = data.payload
+    //         } else {
+    //           throw new Error('Invalid winner')
+    //         }
+    //         break
+    //       case 'draw':
+    //         if (!gameSession.value?.game) {
+    //           throw new Error('Game session not found')
+    //         }
+
+    //         gameSession.value.game.winner = 'draw'
+    //         break
+    //       default:
+    //         console.log('Unknown event:', data)
+    //     }
+    //   } else if (event.type === 'reconnect-interval') {
+    //     console.log('We should set reconnect interval to %d milliseconds', event.value)
+    //   }
+    // })
+
+    const resJson = await res.json()
+
+    const ws = new WebSocket(`${serverUrl.replace('http', 'ws')}/room/${resJson.roomCode}?clientId=${resJson.clientId}`)
+    ws.addEventListener('message', (event) => {
+      console.log('Received event:', event.data)
+      const data = JSON.parse(event.data)
         console.log('Received event:', data)
 
         switch (data.type) {
@@ -98,27 +153,9 @@ export const useOnline = defineStore('online', () => {
           default:
             console.log('Unknown event:', data)
         }
-      } else if (event.type === 'reconnect-interval') {
-        console.log('We should set reconnect interval to %d milliseconds', event.value)
-      }
     })
-
-    const encoder = new TextDecoderStream()
-    sse.body.pipeTo(encoder.writable)
-    
-    const writableStream = new WritableStream({
-      write(chunk) {
-        parser.feed(chunk)
-      }
-    })
-
-    const writableStreamClosed = encoder.readable.pipeTo(writableStream)
-    writableStreamClosed.then(() => {
-      console.log('Stream closed')
-      leaveRoom()
-    }).catch((e) => {
-      console.error('Stream errored:', e)
-      leaveRoom()
+    ws.addEventListener('close', () => {
+      gameSession.value = null
     })
   }
 
